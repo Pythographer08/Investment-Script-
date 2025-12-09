@@ -10,4 +10,4 @@ textblob==0.19.0
 scikit-learn==1.5.2
 python-dotenv==1.1.1
 yfinance==0.2.65
-altair==5.3.1 
+altair==5.3.0 
