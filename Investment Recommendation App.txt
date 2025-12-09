@@ -1,0 +1,7 @@
+Investment Recommendation App 
+
+1) To start backend 
+
+cd C:\Users\niki3\.streamlit
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+

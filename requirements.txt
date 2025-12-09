@@ -1,0 +1,13 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+gunicorn==21.2.0
+streamlit==1.32.0
+requests==2.32.3
+pandas==2.2.3
+beautifulsoup4==4.13.4
+newspaper3k==0.2.8
+textblob==0.19.0
+scikit-learn==1.5.2
+python-dotenv==1.1.1
+yfinance==0.2.65
+altair==5.3.1 
