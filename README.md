@@ -52,9 +52,27 @@ An intelligent investment recommendation system that analyzes news sentiment and
 ## Usage
 
 ### Local Development
-- **Backend API**: http://127.0.0.1:8000
-- **API Documentation**: http://127.0.0.1:8000/docs
-- **Streamlit Dashboard**: http://localhost:8501
+
+**Note:** The links below only work when the services are running. Follow the steps below to start them.
+
+1. **Start the Backend API** (Terminal 1):
+   ```bash
+   cd C:\Users\niki3\.streamlit
+   uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+   Once running, access:
+   - **Backend API**: http://127.0.0.1:8000
+   - **API Documentation**: http://127.0.0.1:8000/docs
+
+2. **Start the Streamlit Dashboard** (Terminal 2):
+   ```bash
+   cd C:\Users\niki3\.streamlit
+   streamlit run streamlit_app.py
+   ```
+   Once running, access:
+   - **Streamlit Dashboard**: http://localhost:8501
+
+**Important:** Keep both terminals open while using the app. The Streamlit dashboard requires the backend API to be running.
 
 ### API Endpoints
 - `GET /news` - Latest news for all tickers
