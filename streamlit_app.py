@@ -90,31 +90,38 @@ except Exception as e:
 # News Section
 st.header("Latest News")
 try:
-    news = requests.get(f"{API_URL}/news", timeout=10).json()
+    # News aggregation across many tickers can take a while on Render; give it longer.
+    news = requests.get(f"{API_URL}/news", timeout=30).json()
     if news:
         news_df = pd.DataFrame(news)[["ticker", "title", "publisher", "link"]]
         st.dataframe(news_df, use_container_width=True)
     else:
         st.write("No news available.")
+except requests.exceptions.Timeout:
+    st.error("News request timed out. The backend may be busy; please try again in a few seconds.")
 except Exception as e:
     st.error(f"Error loading news: {e}")
 
 # Sentiment Section
 st.header("Market Sentiment (Headline + Summary)")
 try:
-    sentiment = requests.get(f"{API_URL}/sentiment", timeout=10).json()
+    # Sentiment endpoint is the heaviest (news + TextBlob per article); allow more time.
+    sentiment = requests.get(f"{API_URL}/sentiment", timeout=45).json()
     if sentiment:
         sentiment_df = pd.DataFrame(sentiment)[["ticker", "title", "summary", "polarity", "subjectivity"]]
         st.dataframe(sentiment_df, use_container_width=True)
     else:
         st.write("No sentiment data available.")
+except requests.exceptions.Timeout:
+    st.error("Sentiment request timed out. The backend may still be computing; try again shortly.")
 except Exception as e:
     st.error(f"Error loading sentiment: {e}")
 
 # Recommendations Section
 st.header("Today's Recommendations")
 try:
-    recs = requests.get(f"{API_URL}/recommendations", timeout=10).json()
+    # Recommendations depend on sentiment aggregation; use a generous timeout.
+    recs = requests.get(f"{API_URL}/recommendations", timeout=45).json()
     if recs:
         recs_df = pd.DataFrame(recs)[["ticker", "avg_polarity", "recommendation"]]
         st.dataframe(recs_df, use_container_width=True)
@@ -139,7 +146,7 @@ try:
                         cwd=".",
                         capture_output=True,
                         text=True,
-                        timeout=60
+                        timeout=60,
                     )
                     if result.returncode == 0:
                         st.success("✅ Email sent successfully!")
@@ -149,8 +156,10 @@ try:
                     st.error(f"❌ Failed to send email: {e}")
     else:
         st.write("No recommendations available.")
+except requests.exceptions.Timeout:
+    st.error("Recommendations request timed out. The backend may still be computing; try again shortly.")
 except requests.exceptions.ConnectionError:
     st.error("⚠️ Cannot connect to backend API. Make sure the FastAPI server is running:")
     st.code("uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000")
 except Exception as e:
-    st.error(f"Error loading recommendations: {e}") 
+    st.error(f"Error loading recommendations: {e}")
