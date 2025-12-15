@@ -138,20 +138,13 @@ try:
                 st.success("Exported to recommendations.csv")
         with col2:
             if st.button("Send Test Email"):
-                import subprocess
-                import sys
                 try:
-                    result = subprocess.run(
-                        [sys.executable, "deploy_daily_report.py"],
-                        cwd=".",
-                        capture_output=True,
-                        text=True,
-                        timeout=60,
-                    )
-                    if result.returncode == 0:
+                    # Delegate email sending to backend so it can use its env vars.
+                    resp = requests.get(f"{API_URL}/run-daily-report", timeout=60)
+                    if resp.status_code == 200:
                         st.success("✅ Email sent successfully!")
                     else:
-                        st.error(f"❌ Error: {result.stderr}")
+                        st.error(f"❌ Error {resp.status_code}: {resp.text}")
                 except Exception as e:
                     st.error(f"❌ Failed to send email: {e}")
     else:
