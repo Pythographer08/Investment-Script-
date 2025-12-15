@@ -244,38 +244,43 @@ def root():
 def run_daily_report():
     """
     Endpoint to trigger daily report generation (for cloud cron jobs).
-    Returns success/error status.
+    Returns success on 200; raises HTTPException with 500 on error.
     """
     try:
         # Import here to avoid circular imports
         import subprocess
         import sys
         from pathlib import Path
-        
+
         script_path = Path(__file__).parent.parent / "deploy_daily_report.py"
         result = subprocess.run(
             [sys.executable, str(script_path)],
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=300,  # 5 minute timeout
         )
-        
+
         if result.returncode == 0:
             return {
                 "status": "success",
                 "message": "Daily report generated and emailed successfully",
-                "output": result.stdout
+                "output": result.stdout,
             }
-        else:
-            return {
+
+        # Non‑zero exit code → treat as internal error
+        raise HTTPException(
+            status_code=500,
+            detail={
                 "status": "error",
                 "message": "Failed to generate report",
-                "error": result.stderr
-            }, 500
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }, 500
+                "error": result.stderr,
+            },
+        )
+    except Exception as exc:
+        # Unexpected exception → also return proper 500
+        raise HTTPException(
+            status_code=500,
+            detail={"status": "error", "message": str(exc)},
+        )
 
 
