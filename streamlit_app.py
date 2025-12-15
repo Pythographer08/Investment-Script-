@@ -5,8 +5,65 @@ import altair as alt
 
 API_URL = "https://investment-script.onrender.com"
 TICKERS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "UNH", "LLY",
-    "JPM", "V", "XOM", "MA", "AVGO", "PG", "HD", "COST", "MRK", "ABBV"
+    # Tech / Communication
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "META",
+    "TSLA",
+    "ADBE",
+    "NFLX",
+    "INTC",
+    "CSCO",
+    "CRM",
+    "AMD",
+    "ORCL",
+    # Healthcare (10)
+    "UNH",
+    "LLY",
+    "PFE",
+    "ABBV",
+    "MRK",
+    "JNJ",
+    "TMO",
+    "MDT",
+    "BMY",
+    "AMGN",
+    # Financials (10)
+    "JPM",
+    "BAC",
+    "WFC",
+    "C",
+    "GS",
+    "MS",
+    "V",
+    "MA",
+    "BLK",
+    "AXP",
+    # Energy / Industrials / Materials (10)
+    "XOM",
+    "CVX",
+    "COP",
+    "SLB",
+    "EOG",
+    "MPC",
+    "PSX",
+    "KMI",
+    "OXY",
+    "PXD",
+    # Consumer / Retail / Staples (10)
+    "WMT",
+    "COST",
+    "PG",
+    "KO",
+    "PEP",
+    "NKE",
+    "MCD",
+    "HD",
+    "TGT",
+    "SBUX",
 ]
 
 st.title("US Market Investment Recommendations")
