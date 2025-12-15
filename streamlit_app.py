@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import altair as alt
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "https://investment-script.onrender.com"
 TICKERS = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "UNH", "LLY",
     "JPM", "V", "XOM", "MA", "AVGO", "PG", "HD", "COST", "MRK", "ABBV"
