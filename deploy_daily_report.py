@@ -10,6 +10,7 @@ import smtplib
 from dotenv import load_dotenv
 
 from backend.main import TICKERS, _fetch_news_for_ticker, _analyze_sentiment, _recommendation_from_score
+# TICKERS now uses Indian stocks from backend.indian_tickers
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -137,7 +138,7 @@ def send_email_with_attachment(csv_path: Path) -> None:
     msg["To"] = recipient
 
     msg.set_content(
-        "Attached is today's US market investment recommendations CSV.\n\n"
+        "Attached is today's Indian market investment recommendations CSV.\n\n"
         "This file was generated automatically by the investment recommendation system."
     )
 

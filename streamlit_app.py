@@ -3,70 +3,13 @@ import requests
 import pandas as pd
 import altair as alt
 
-API_URL = "https://investment-script.onrender.com"
-TICKERS = [
-    # Tech / Communication
-    "AAPL",
-    "MSFT",
-    "GOOGL",
-    "AMZN",
-    "NVDA",
-    "META",
-    "TSLA",
-    "ADBE",
-    "NFLX",
-    "INTC",
-    "CSCO",
-    "CRM",
-    "AMD",
-    "ORCL",
-    # Healthcare (10)
-    "UNH",
-    "LLY",
-    "PFE",
-    "ABBV",
-    "MRK",
-    "JNJ",
-    "TMO",
-    "MDT",
-    "BMY",
-    "AMGN",
-    # Financials (10)
-    "JPM",
-    "BAC",
-    "WFC",
-    "C",
-    "GS",
-    "MS",
-    "V",
-    "MA",
-    "BLK",
-    "AXP",
-    # Energy / Industrials / Materials (10)
-    "XOM",
-    "CVX",
-    "COP",
-    "SLB",
-    "EOG",
-    "MPC",
-    "PSX",
-    "KMI",
-    "OXY",
-    "PXD",
-    # Consumer / Retail / Staples (10)
-    "WMT",
-    "COST",
-    "PG",
-    "KO",
-    "PEP",
-    "NKE",
-    "MCD",
-    "HD",
-    "TGT",
-    "SBUX",
-]
+# Import Indian tickers
+from backend.indian_tickers import INDIAN_TICKERS
 
-st.title("US Market Investment Recommendations")
+API_URL = "https://investment-script.onrender.com"
+TICKERS = INDIAN_TICKERS
+
+st.title("Indian Market Investment Recommendations")
 
 # Ticker selection and price chart
 st.header("Price Chart")
