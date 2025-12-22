@@ -10,10 +10,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# API Configuration for Indian API (indianapi.in)
-INDIAN_STOCK_API_KEY = os.getenv("INDIAN_STOCK_API_KEY", "")
-INDIAN_STOCK_API_BASE_URL = os.getenv("INDIAN_STOCK_API_BASE_URL", "https://stock.indianapi.in")
-INDIAN_STOCK_API_AUTH_HEADER = os.getenv("INDIAN_STOCK_API_AUTH_HEADER", "x-api-key")  # IndianAPI uses x-api-key
+# API Configuration for Indian API (stock.indianapi.in)
+# Strip whitespace to avoid issues with copied values containing newlines/spaces.
+INDIAN_STOCK_API_KEY = (os.getenv("INDIAN_STOCK_API_KEY", "") or "").strip()
+INDIAN_STOCK_API_BASE_URL = (os.getenv("INDIAN_STOCK_API_BASE_URL", "https://stock.indianapi.in") or "").strip()
+INDIAN_STOCK_API_AUTH_HEADER = (os.getenv("INDIAN_STOCK_API_AUTH_HEADER", "x-api-key") or "x-api-key").strip()  # IndianAPI uses x-api-key
 
 
 class IndianStockAPI:
