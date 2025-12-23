@@ -6,22 +6,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from textblob import TextBlob
 
-# Import Indian API client and tickers
-from backend.indian_stock_api import IndianStockAPI
+# Use Indian tickers for coverage
 from backend.indian_tickers import INDIAN_TICKERS
+from backend.newsapi_client import search_news_for_query
 
-# Initialize Indian API client (will raise error if API key not configured)
-try:
-    indian_api = IndianStockAPI()
-except ValueError as e:
-    print(f"Warning: Indian API not configured: {e}")
-    indian_api = None
-
-# Use Indian tickers
+# Ticker universe
 TICKERS: List[str] = INDIAN_TICKERS
 
 
-app = FastAPI(title="Indian Market Investment Recommendation API")
+app = FastAPI(title="Indian Market Investment Recommendation API (News-only mode)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,17 +27,11 @@ app.add_middleware(
 
 def _fetch_news_for_ticker(ticker: str) -> List[Dict]:
     """
-    Fetch latest news for a single ticker using Indian Stock API.
-    Falls back to empty list if API is not configured or fails.
+    Fetch latest news for a single ticker using NewsAPI.ai (or compatible)
+    via backend.newsapi_client. Returns empty list on failure.
     """
-    if indian_api is None:
-        print(f"Warning: Indian API not configured, skipping news for {ticker}")
-        return []
-    
     try:
-        # Fetch news from Indian API
-        news_items = indian_api.fetch_news(ticker, limit=10)
-        return news_items
+        return search_news_for_query(ticker, limit=20)
     except Exception as e:
         print(f"Error fetching news for {ticker}: {e}")
         return []
@@ -79,26 +66,8 @@ def _recommendation_from_score(score: float) -> str:
 
 @app.get("/price_chart")
 def price_chart(ticker: str):
-    if ticker not in TICKERS:
-        raise HTTPException(status_code=400, detail="Unsupported ticker")
-
-    if indian_api is None:
-        raise HTTPException(status_code=503, detail="Indian API not configured")
-
-    try:
-        # Fetch price history from Indian API (30 days)
-        price_data = indian_api.fetch_price_history(ticker, period_days=30)
-        dates = price_data.get("dates", [])
-        closes = price_data.get("closes", [])
-        
-        if not dates or not closes:
-            raise HTTPException(status_code=404, detail="No price data found")
-        
-        return {"ticker": ticker, "dates": dates, "closes": closes}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    # Price data is temporarily unavailable until a new provider is configured.
+    raise HTTPException(status_code=503, detail="Price data unavailable; provider not configured")
 
 
 @app.get("/news")
@@ -253,7 +222,10 @@ def _enhance_recommendation_with_mcp(ticker: str, sentiment_score: float, base_r
 
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Indian Market Investment Recommendation API"}
+    return {
+        "status": "ok",
+        "message": "Indian Market Investment Recommendation API (news/sentiment only; prices temporarily disabled)",
+    }
 
 
 @app.get("/run-daily-report")
