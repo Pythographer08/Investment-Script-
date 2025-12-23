@@ -5,6 +5,7 @@ import datetime as dt
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from textblob import TextBlob
+import yfinance as yf
 
 # Use Indian tickers for coverage
 from backend.indian_tickers import INDIAN_TICKERS
@@ -14,7 +15,7 @@ from backend.newsapi_client import search_news_for_query
 TICKERS: List[str] = INDIAN_TICKERS
 
 
-app = FastAPI(title="Indian Market Investment Recommendation API (News-only mode)")
+app = FastAPI(title="Indian Market Investment Recommendation API (News + Yahoo Finance prices)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -66,8 +67,20 @@ def _recommendation_from_score(score: float) -> str:
 
 @app.get("/price_chart")
 def price_chart(ticker: str):
-    # Price data is temporarily unavailable until a new provider is configured.
-    raise HTTPException(status_code=503, detail="Price data unavailable; provider not configured")
+    if ticker not in TICKERS:
+        raise HTTPException(status_code=400, detail="Unsupported ticker")
+
+    try:
+        data = yf.Ticker(ticker).history(period="1mo")
+    except Exception as exc:  # pragma: no cover - defensive
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    if data.empty:
+        raise HTTPException(status_code=404, detail="No price data found")
+
+    dates: List[str] = [d.strftime("%Y-%m-%d") for d in data.index.to_pydatetime()]
+    closes: List[float] = [float(c) for c in data["Close"].tolist()]
+    return {"ticker": ticker, "dates": dates, "closes": closes}
 
 
 @app.get("/news")
@@ -224,7 +237,7 @@ def _enhance_recommendation_with_mcp(ticker: str, sentiment_score: float, base_r
 def root():
     return {
         "status": "ok",
-        "message": "Indian Market Investment Recommendation API (news/sentiment only; prices temporarily disabled)",
+        "message": "Indian Market Investment Recommendation API (news via NewsAPI.ai; prices via Yahoo Finance)",
     }
 
 
