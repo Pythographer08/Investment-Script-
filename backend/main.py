@@ -33,7 +33,13 @@ def _fetch_news_for_ticker(ticker: str) -> List[Dict]:
     """
     try:
         query = _ticker_to_query(ticker)
-        return search_news_for_query(query, limit=20)
+        articles = search_news_for_query(query, limit=20)
+
+        # Normalize ticker back to the original symbol used in our system
+        for item in articles:
+            if isinstance(item, dict):
+                item["ticker"] = ticker
+        return articles
     except Exception as e:
         print(f"Error fetching news for {ticker}: {e}")
         return []
