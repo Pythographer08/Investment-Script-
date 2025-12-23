@@ -32,10 +32,25 @@ def _fetch_news_for_ticker(ticker: str) -> List[Dict]:
     via backend.newsapi_client. Returns empty list on failure.
     """
     try:
-        return search_news_for_query(ticker, limit=20)
+        query = _ticker_to_query(ticker)
+        return search_news_for_query(query, limit=20)
     except Exception as e:
         print(f"Error fetching news for {ticker}: {e}")
         return []
+
+
+def _ticker_to_query(ticker: str) -> str:
+    """
+    Convert ticker symbol to a news-friendly query.
+    Default: strip .NS/.BO. Extend here with specific company-name mappings if needed.
+    """
+    if not ticker:
+        return ""
+    clean = ticker.replace(".NS", "").replace(".BO", "")
+    # Add specific mappings if needed, e.g.:
+    # mappings = {"TCS.NS": "Tata Consultancy Services", "RELIANCE.NS": "Reliance Industries"}
+    # return mappings.get(ticker, clean)
+    return clean
 
 
 def _analyze_sentiment(text: str) -> Dict[str, float]:
