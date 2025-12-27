@@ -218,7 +218,7 @@ with tab2:
 
 # ========== TAB 3: PRICE CHARTS ==========
 with tab3:
-    st.subheader("💹 Stock Price Charts")
+    st.subheader("💹 Stock Price Charts & Analysis")
     
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -227,6 +227,9 @@ with tab3:
         period_options = ["1mo", "3mo", "6mo", "1y"]
         # Note: Backend currently only supports 1mo, but UI is ready for expansion
         st.write("**Period:** 1 month (30 days)")
+    
+    # Toggle for technical/fundamental analysis
+    show_analysis = st.checkbox("📊 Show Technical & Fundamental Analysis", value=False, key="show_analysis")
     
     try:
         with st.spinner("Loading price data..."):
@@ -267,6 +270,140 @@ with tab3:
                 height=400
             )
             st.altair_chart(chart, use_container_width=True)
+            
+            # Technical & Fundamental Analysis Section
+            if show_analysis:
+                st.divider()
+                st.subheader("📊 Technical & Fundamental Analysis")
+                
+                # Fetch analysis data
+                try:
+                    with st.spinner("Loading analysis data..."):
+                        analysis_data = requests.get(f"{API_URL}/analysis/{chart_ticker}", timeout=15).json()
+                    
+                    # Technical Indicators
+                    if analysis_data.get("technical"):
+                        st.markdown("### 📈 Technical Indicators")
+                        tech = analysis_data["technical"]
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            rsi = tech.get("rsi", 0)
+                            rsi_color = "normal" if 30 <= rsi <= 70 else "inverse"
+                            rsi_label = "RSI"
+                            if rsi < 30:
+                                rsi_label += " (Oversold)"
+                            elif rsi > 70:
+                                rsi_label += " (Overbought)"
+                            st.metric(rsi_label, f"{rsi:.2f}", delta=None)
+                        
+                        with col2:
+                            sma_20 = tech.get("sma", {}).get("20")
+                            if sma_20:
+                                st.metric("SMA 20", f"${sma_20:.2f}")
+                            else:
+                                st.metric("SMA 20", "N/A")
+                        
+                        with col3:
+                            sma_50 = tech.get("sma", {}).get("50")
+                            if sma_50:
+                                st.metric("SMA 50", f"${sma_50:.2f}")
+                            else:
+                                st.metric("SMA 50", "N/A")
+                        
+                        with col4:
+                            current = tech.get("current_price")
+                            if current:
+                                st.metric("Current Price", f"${current:.2f}")
+                            else:
+                                st.metric("Current Price", "N/A")
+                        
+                        # RSI interpretation
+                        if rsi < 30:
+                            st.info("🟢 **RSI indicates oversold conditions** - Potential buying opportunity")
+                        elif rsi > 70:
+                            st.warning("🔴 **RSI indicates overbought conditions** - Consider taking profits")
+                        else:
+                            st.success("🟡 **RSI in neutral range** - No extreme conditions")
+                    
+                    # Fundamental Data
+                    if analysis_data.get("fundamental"):
+                        st.markdown("### 💼 Fundamental Metrics")
+                        fund = analysis_data["fundamental"]
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            pe = fund.get("trailingPE")
+                            if pe:
+                                st.metric("Trailing P/E", f"{pe:.2f}")
+                            else:
+                                st.metric("Trailing P/E", "N/A")
+                        
+                        with col2:
+                            forward_pe = fund.get("forwardPE")
+                            if forward_pe:
+                                st.metric("Forward P/E", f"{forward_pe:.2f}")
+                            else:
+                                st.metric("Forward P/E", "N/A")
+                        
+                        with col3:
+                            market_cap = fund.get("marketCap")
+                            if market_cap:
+                                # Format market cap
+                                if market_cap >= 1e12:
+                                    cap_str = f"${market_cap/1e12:.2f}T"
+                                elif market_cap >= 1e9:
+                                    cap_str = f"${market_cap/1e9:.2f}B"
+                                elif market_cap >= 1e6:
+                                    cap_str = f"${market_cap/1e6:.2f}M"
+                                else:
+                                    cap_str = f"${market_cap:.2f}"
+                                st.metric("Market Cap", cap_str)
+                            else:
+                                st.metric("Market Cap", "N/A")
+                        
+                        with col4:
+                            div_yield = fund.get("dividendYield")
+                            if div_yield:
+                                st.metric("Dividend Yield", f"{div_yield*100:.2f}%")
+                            else:
+                                st.metric("Dividend Yield", "N/A")
+                        
+                        # Growth metrics
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            rev_growth = fund.get("revenueGrowth")
+                            if rev_growth is not None:
+                                growth_color = "normal" if rev_growth > 0 else "inverse"
+                                st.metric("Revenue Growth", f"{rev_growth*100:.2f}%", delta=None)
+                            else:
+                                st.metric("Revenue Growth", "N/A")
+                        
+                        with col2:
+                            earn_growth = fund.get("earningsGrowth")
+                            if earn_growth is not None:
+                                growth_color = "normal" if earn_growth > 0 else "inverse"
+                                st.metric("Earnings Growth", f"{earn_growth*100:.2f}%", delta=None)
+                            else:
+                                st.metric("Earnings Growth", "N/A")
+                        
+                        # Target price
+                        target = fund.get("targetMeanPrice")
+                        if target and current_price:
+                            target_change = ((target - current_price) / current_price) * 100
+                            st.metric("Analyst Target Price", f"${target:.2f}", f"{target_change:+.2f}%")
+                
+                except requests.exceptions.Timeout:
+                    st.warning("⏱️ Analysis request timed out. This may take a moment for some stocks.")
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 404:
+                        st.info("ℹ️ Analysis data not available for this ticker. This is normal for some stocks.")
+                    else:
+                        st.error(f"❌ Error loading analysis: {e}")
+                except Exception as e:
+                    st.warning(f"⚠️ Could not load analysis data: {str(e)}")
         else:
             st.warning("No price data available for this ticker.")
     except requests.exceptions.ConnectionError:
