@@ -99,17 +99,40 @@ def get_technical_indicators(
 
 def get_fundamental_snapshot(ticker: str) -> Dict:
     """
-    Get fundamental data (earnings, revenue, valuation) using MCP.
+    Get fundamental data (earnings, revenue, valuation) using yfinance.
+    Uses yfinance as fallback since MCP tools require MCP server connection.
     
     Args:
-        ticker: Stock symbol
+        ticker: Stock symbol (keep .NS/.BO suffix for Indian stocks)
         
     Returns:
-        Dict with fundamental metrics
+        Dict with fundamental metrics: {trailingPE, marketCap, revenueGrowth, earningsGrowth, etc.}
     """
-    # This will be called via MCP function: mcp_financial-mcp_fundamental_snapshot
-    # TODO: Integrate actual MCP call
-    return {}
+    try:
+        import yfinance as yf
+        
+        # yfinance needs .NS/.BO suffix for Indian stocks, so keep it as-is
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        
+        # Extract key fundamentals
+        fundamentals = {
+            "trailingPE": info.get("trailingPE"),
+            "forwardPE": info.get("forwardPE"),
+            "marketCap": info.get("marketCap"),
+            "revenueGrowth": info.get("revenueGrowth"),
+            "earningsGrowth": info.get("earningsGrowth"),
+            "profitMargins": info.get("profitMargins"),
+            "dividendYield": info.get("dividendYield"),
+            "currentPrice": info.get("currentPrice"),
+            "targetMeanPrice": info.get("targetMeanPrice"),
+        }
+        
+        # Remove None values
+        return {k: v for k, v in fundamentals.items() if v is not None}
+    except Exception as e:
+        # Return empty dict on error (fallback to sentiment-only)
+        return {}
 
 
 def enhance_recommendation_with_mcp(
