@@ -40,7 +40,7 @@ def get_technical_indicators(
     Uses yfinance as fallback since MCP tools require MCP server connection.
     
     Args:
-        ticker: Stock symbol (will strip .NS/.BO for yfinance)
+        ticker: Stock symbol (keep .NS/.BO suffix for Indian stocks)
         period: History period (e.g., "3mo", "6mo", "1y")
         sma_windows: List of SMA periods
         ema_windows: List of EMA periods
@@ -53,11 +53,9 @@ def get_technical_indicators(
         import yfinance as yf
         import pandas as pd
         
-        # Clean ticker for yfinance (remove .NS/.BO suffix)
-        clean_ticker = ticker.replace(".NS", "").replace(".BO", "")
-        
+        # yfinance needs .NS/.BO suffix for Indian stocks, so keep it as-is
         # Fetch historical data
-        stock = yf.Ticker(clean_ticker)
+        stock = yf.Ticker(ticker)
         hist = stock.history(period=period)
         
         if hist.empty:

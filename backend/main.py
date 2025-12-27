@@ -232,12 +232,10 @@ def _enhance_recommendation_with_mcp(ticker: str, sentiment_score: float, base_r
     factors = {"sentiment": sentiment_score}
     confidence = 0.5  # Base confidence from sentiment only
     
-    # Clean ticker for MCP (remove .NS/.BO suffix, MCP might not support Indian stocks)
-    clean_ticker = ticker.replace(".NS", "").replace(".BO", "")
-    
-    # Try to get technical indicators (MCP may only support US stocks)
+    # Pass ticker as-is (yfinance needs .NS/.BO suffix for Indian stocks)
+    # Try to get technical indicators
     try:
-        technicals = get_technical_indicators(clean_ticker, period="6mo")
+        technicals = get_technical_indicators(ticker, period="6mo")
         if technicals and isinstance(technicals, dict) and technicals.get("rsi"):
             factors["technical"] = {
                 "rsi": technicals.get("rsi"),
@@ -256,7 +254,7 @@ def _enhance_recommendation_with_mcp(ticker: str, sentiment_score: float, base_r
     
     # Try to get fundamentals
     try:
-        fundamentals = get_fundamental_snapshot(clean_ticker)
+        fundamentals = get_fundamental_snapshot(ticker)
         if fundamentals and isinstance(fundamentals, dict):
             factors["fundamental"] = {
                 "pe_ratio": fundamentals.get("trailingPE"),
