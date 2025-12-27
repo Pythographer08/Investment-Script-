@@ -3,13 +3,14 @@ import requests
 import pandas as pd
 import altair as alt
 
-# Import Indian tickers
+# Import combined US and Indian tickers
+from backend.us_tickers import US_TICKERS
 from backend.indian_tickers import INDIAN_TICKERS
 
 API_URL = "https://investment-script.onrender.com"
-TICKERS = INDIAN_TICKERS
+TICKERS = US_TICKERS + INDIAN_TICKERS
 
-st.title("Indian Market Investment Recommendations")
+st.title("US & Indian Market Investment Recommendations")
 
 # Ticker selection and price chart
 st.header("Price Chart")

@@ -138,7 +138,7 @@ def send_email_with_attachment(csv_path: Path) -> None:
     msg["To"] = recipient
 
     msg.set_content(
-        "Attached is today's Indian market investment recommendations CSV.\n\n"
+        "Attached is today's US & Indian market investment recommendations CSV.\n\n"
         "This file was generated automatically by the investment recommendation system."
     )
 

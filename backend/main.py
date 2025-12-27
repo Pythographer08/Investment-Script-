@@ -7,15 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from textblob import TextBlob
 import yfinance as yf
 
-# Use Indian tickers for coverage
+# Import US and Indian tickers
+from backend.us_tickers import US_TICKERS
 from backend.indian_tickers import INDIAN_TICKERS
-from backend.newsapi_client import search_news_for_query
 
-# Ticker universe
-TICKERS: List[str] = INDIAN_TICKERS
+# Ticker universe: Combine US and Indian stocks
+TICKERS: List[str] = US_TICKERS + INDIAN_TICKERS
 
 
-app = FastAPI(title="Indian Market Investment Recommendation API (News + Yahoo Finance prices)")
+app = FastAPI(title="US & Indian Market Investment Recommendation API (Yahoo Finance)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,35 +28,33 @@ app.add_middleware(
 
 def _fetch_news_for_ticker(ticker: str) -> List[Dict]:
     """
-    Fetch latest news for a single ticker using NewsAPI.ai (or compatible)
-    via backend.newsapi_client. Returns empty list on failure.
+    Fetch latest news for a single ticker using yfinance.
+    yfinance v0.2+ uses nested structure: item['content']['title'], item['content']['summary']
     """
     try:
-        query = _ticker_to_query(ticker)
-        articles = search_news_for_query(query, limit=20)
+        t = yf.Ticker(ticker)
+        # yfinance .news is a list of dicts with 'id' and 'content' keys
+        news_items = t.news or []
 
-        # Normalize ticker back to the original symbol used in our system
-        for item in articles:
-            if isinstance(item, dict):
-                item["ticker"] = ticker
-        return articles
+        cleaned: List[Dict] = []
+        for item in news_items:
+            content = item.get("content", {})
+            provider = content.get("provider", {})
+            canonical = content.get("canonicalUrl", {})
+            
+            cleaned.append(
+                {
+                    "ticker": ticker,
+                    "title": content.get("title", ""),
+                    "summary": content.get("summary", "") or content.get("description", ""),
+                    "publisher": provider.get("displayName", "") if isinstance(provider, dict) else "",
+                    "link": canonical.get("url", "") if isinstance(canonical, dict) else content.get("link", ""),
+                }
+            )
+        return cleaned
     except Exception as e:
         print(f"Error fetching news for {ticker}: {e}")
         return []
-
-
-def _ticker_to_query(ticker: str) -> str:
-    """
-    Convert ticker symbol to a news-friendly query.
-    Default: strip .NS/.BO. Extend here with specific company-name mappings if needed.
-    """
-    if not ticker:
-        return ""
-    clean = ticker.replace(".NS", "").replace(".BO", "")
-    # Add specific mappings if needed, e.g.:
-    # mappings = {"TCS.NS": "Tata Consultancy Services", "RELIANCE.NS": "Reliance Industries"}
-    # return mappings.get(ticker, clean)
-    return clean
 
 
 def _analyze_sentiment(text: str) -> Dict[str, float]:
@@ -258,7 +256,7 @@ def _enhance_recommendation_with_mcp(ticker: str, sentiment_score: float, base_r
 def root():
     return {
         "status": "ok",
-        "message": "Indian Market Investment Recommendation API (news via NewsAPI.ai; prices via Yahoo Finance)",
+        "message": "US & Indian Market Investment Recommendation API (all data via Yahoo Finance)",
     }
 
 
