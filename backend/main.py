@@ -291,6 +291,116 @@ def health():
     return {"status": "healthy", "service": "investment-recommendation-api"}
 
 
+@app.get("/technical/{ticker}")
+def get_technical_analysis(ticker: str):
+    """
+    Get technical indicators (RSI, SMA, EMA) for a specific ticker.
+    Fetched on-demand to avoid timeouts in bulk recommendations.
+    
+    Args:
+        ticker: Stock symbol (e.g., "AAPL", "TCS.NS")
+    
+    Returns:
+        Dict with technical indicators: {rsi, sma: {20, 50, 200}, ema: {12, 26}, current_price}
+    """
+    if ticker not in TICKERS:
+        raise HTTPException(status_code=400, detail="Unsupported ticker")
+    
+    from backend.mcp_integration import get_technical_indicators
+    
+    try:
+        technicals = get_technical_indicators(ticker, period="6mo")
+        if not technicals:
+            raise HTTPException(status_code=404, detail="No technical data available for this ticker")
+        
+        return {
+            "ticker": ticker,
+            "technical_indicators": technicals,
+            "period": "6mo"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching technical indicators: {str(e)}")
+
+
+@app.get("/fundamental/{ticker}")
+def get_fundamental_analysis(ticker: str):
+    """
+    Get fundamental data (P/E, market cap, growth metrics) for a specific ticker.
+    Fetched on-demand to avoid timeouts in bulk recommendations.
+    
+    Args:
+        ticker: Stock symbol (e.g., "AAPL", "TCS.NS")
+    
+    Returns:
+        Dict with fundamental metrics: {trailingPE, marketCap, revenueGrowth, etc.}
+    """
+    if ticker not in TICKERS:
+        raise HTTPException(status_code=400, detail="Unsupported ticker")
+    
+    from backend.mcp_integration import get_fundamental_snapshot
+    
+    try:
+        fundamentals = get_fundamental_snapshot(ticker)
+        if not fundamentals:
+            raise HTTPException(status_code=404, detail="No fundamental data available for this ticker")
+        
+        return {
+            "ticker": ticker,
+            "fundamentals": fundamentals
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching fundamentals: {str(e)}")
+
+
+@app.get("/analysis/{ticker}")
+def get_full_analysis(ticker: str):
+    """
+    Get both technical indicators and fundamental data for a specific ticker.
+    Convenience endpoint that combines /technical and /fundamental.
+    
+    Args:
+        ticker: Stock symbol (e.g., "AAPL", "TCS.NS")
+    
+    Returns:
+        Dict with both technical and fundamental analysis
+    """
+    if ticker not in TICKERS:
+        raise HTTPException(status_code=400, detail="Unsupported ticker")
+    
+    from backend.mcp_integration import get_technical_indicators, get_fundamental_snapshot
+    
+    result = {
+        "ticker": ticker,
+        "technical": {},
+        "fundamental": {}
+    }
+    
+    # Fetch technical indicators
+    try:
+        technicals = get_technical_indicators(ticker, period="6mo")
+        if technicals:
+            result["technical"] = technicals
+    except Exception:
+        pass  # Silently fail, return empty dict
+    
+    # Fetch fundamentals
+    try:
+        fundamentals = get_fundamental_snapshot(ticker)
+        if fundamentals:
+            result["fundamental"] = fundamentals
+    except Exception:
+        pass  # Silently fail, return empty dict
+    
+    if not result["technical"] and not result["fundamental"]:
+        raise HTTPException(status_code=404, detail="No analysis data available for this ticker")
+    
+    return result
+
+
 @app.get("/run-daily-report")
 def run_daily_report():
     """
