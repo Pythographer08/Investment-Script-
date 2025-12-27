@@ -226,46 +226,30 @@ def _enhance_recommendation_with_mcp(ticker: str, sentiment_score: float, base_r
     """
     Enhance recommendation using MCP tools (technical indicators, fundamentals).
     Falls back gracefully if MCP data unavailable.
+    
+    NOTE: Technical indicators are currently disabled to avoid timeouts.
+    They can be enabled per-ticker via a separate endpoint if needed.
     """
     from backend.mcp_integration import get_technical_indicators, get_fundamental_snapshot
     
     factors = {"sentiment": sentiment_score}
     confidence = 0.5  # Base confidence from sentiment only
     
-    # Pass ticker as-is (yfinance needs .NS/.BO suffix for Indian stocks)
-    # Try to get technical indicators
-    try:
-        technicals = get_technical_indicators(ticker, period="6mo")
-        if technicals and isinstance(technicals, dict) and technicals.get("rsi"):
-            factors["technical"] = {
-                "rsi": technicals.get("rsi"),
-                "sma_20": technicals.get("sma", {}).get("20") if isinstance(technicals.get("sma"), dict) else None,
-                "sma_50": technicals.get("sma", {}).get("50") if isinstance(technicals.get("sma"), dict) else None,
-            }
-            # Adjust recommendation based on RSI
-            rsi = technicals.get("rsi", 50)
-            if rsi < 30:  # Oversold - bullish
-                confidence += 0.1
-            elif rsi > 70:  # Overbought - bearish
-                confidence -= 0.1
-    except Exception as e:
-        # MCP might not support this ticker (likely Indian stocks)
-        pass
+    # Skip technical indicators for now to avoid timeouts (109 stocks × API calls = too slow)
+    # Technical indicators can be fetched on-demand via a separate endpoint if needed
+    # Only fetch for US stocks if we want to enable it selectively
+    # try:
+    #     technicals = get_technical_indicators(ticker, period="6mo")
+    #     ...
+    # except Exception:
+    #     pass
     
-    # Try to get fundamentals
-    try:
-        fundamentals = get_fundamental_snapshot(ticker)
-        if fundamentals and isinstance(fundamentals, dict):
-            factors["fundamental"] = {
-                "pe_ratio": fundamentals.get("trailingPE"),
-                "market_cap": fundamentals.get("marketCap"),
-            }
-            # Adjust confidence based on fundamentals
-            pe = fundamentals.get("trailingPE")
-            if pe and 0 < pe < 20:  # Reasonable P/E
-                confidence += 0.1
-    except Exception:
-        pass
+    # Skip fundamentals for now to avoid timeouts
+    # try:
+    #     fundamentals = get_fundamental_snapshot(ticker)
+    #     ...
+    # except Exception:
+    #     pass
     
     # Final recommendation: combine sentiment + technicals
     final_rec = base_rec

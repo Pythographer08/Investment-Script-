@@ -52,11 +52,18 @@ def get_technical_indicators(
     try:
         import yfinance as yf
         import pandas as pd
+        import warnings
         
         # yfinance needs .NS/.BO suffix for Indian stocks, so keep it as-is
-        # Fetch historical data
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period=period)
+        # Suppress yfinance warnings about delisted stocks
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            # Fetch historical data
+            stock = yf.Ticker(ticker)
+            try:
+                hist = stock.history(period=period, quiet=True)
+            except Exception:
+                return {}
         
         if hist.empty:
             return {}
@@ -110,10 +117,17 @@ def get_fundamental_snapshot(ticker: str) -> Dict:
     """
     try:
         import yfinance as yf
+        import warnings
         
         # yfinance needs .NS/.BO suffix for Indian stocks, so keep it as-is
-        stock = yf.Ticker(ticker)
-        info = stock.info
+        # Suppress yfinance warnings about delisted stocks
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            stock = yf.Ticker(ticker)
+            try:
+                info = stock.info
+            except Exception:
+                return {}
         
         # Extract key fundamentals
         fundamentals = {
