@@ -1,16 +1,16 @@
-# US Market Investment Recommendation System
+# US & Indian Market Investment Recommendation System
 
-An intelligent investment recommendation system that analyzes news sentiment and provides daily Buy/Hold/Sell recommendations for top US stocks.
+An intelligent investment recommendation system that analyzes news sentiment and provides daily Buy/Hold/Sell recommendations for top US and Indian stocks.
 
 ## Features
 
-- **Real-time News Analysis**: Fetches latest news from Yahoo Finance for top 50 US stocks
+- **Real-time News Analysis**: Fetches latest news from Yahoo Finance for 109 stocks (50 US + 59 Indian)
 - **Sentiment Analysis**: Analyzes news headlines and summaries using TextBlob
 - **Investment Recommendations**: Provides Buy/Hold/Sell recommendations based on sentiment
 - **Interactive Dashboard**: Streamlit web interface for real-time data visualization
 - **Price Charts**: Interactive charts showing 30-day price history
 - **Daily Email Reports**: Automated daily email reports with CSV attachments
-- **Cloud Deployment**: Ready for deployment on Railway/Heroku
+- **Cloud Deployment**: Ready for deployment on Render/Streamlit Cloud
 
 ## Tech Stack
 
@@ -88,11 +88,16 @@ python deploy_daily_report.py
 
 ## Deployment
 
-### Railway Deployment
+### Render Deployment (Backend)
 1. Fork/clone this repository
-2. Connect to Railway
-3. Set environment variables in Railway dashboard
+2. Connect to Render
+3. Set environment variables in Render dashboard
 4. Deploy automatically
+
+### Streamlit Cloud Deployment (Frontend)
+1. Connect your GitHub repository to Streamlit Cloud
+2. Set `API_URL` environment variable to your Render backend URL
+3. Deploy automatically
 
 ### Environment Variables
 - `GMAIL_USER`: Your Gmail address
@@ -101,9 +106,11 @@ python deploy_daily_report.py
 
 ## Stock Coverage
 
-Currently covers top 20 US stocks by market cap:
-- AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, BRK-B, UNH, LLY
-- JPM, V, XOM, MA, AVGO, PG, HD, COST, MRK, ABBV
+Currently covers **109 stocks** across US and Indian markets:
+
+**US Stocks (50)**: Technology (AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, etc.), Healthcare (UNH, LLY, PFE, ABBV, etc.), Financials (JPM, BAC, V, MA, etc.), Energy (XOM, CVX, COP, etc.), Consumer (WMT, COST, PG, KO, etc.)
+
+**Indian Stocks (59)**: IT (TCS, INFY, HCLTECH, WIPRO, etc.), Banking (HDFCBANK, ICICIBANK, SBIN, etc.), Pharma (SUNPHARMA, DRREDDY, CIPLA, etc.), FMCG (HINDUNILVR, ITC, NESTLEIND, etc.), Energy (RELIANCE, ONGC, etc.), Auto (MARUTI, TATAMOTORS, etc.), and more
 
 ## Contributing
 
