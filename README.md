@@ -4,7 +4,7 @@ An intelligent investment recommendation system that analyzes news sentiment and
 
 ## Features
 
-- **Real-time News Analysis**: Fetches latest news from Yahoo Finance for top 20 US stocks
+- **Real-time News Analysis**: Fetches latest news from Yahoo Finance for top 50 US stocks
 - **Sentiment Analysis**: Analyzes news headlines and summaries using TextBlob
 - **Investment Recommendations**: Provides Buy/Hold/Sell recommendations based on sentiment
 - **Interactive Dashboard**: Streamlit web interface for real-time data visualization
