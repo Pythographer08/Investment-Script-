@@ -36,21 +36,67 @@ def get_technical_indicators(
     rsi_window: int = 14
 ) -> Dict:
     """
-    Get technical indicators (RSI, SMA, EMA) for a ticker using MCP.
+    Get technical indicators (RSI, SMA, EMA) for a ticker.
+    Uses yfinance as fallback since MCP tools require MCP server connection.
     
     Args:
-        ticker: Stock symbol
+        ticker: Stock symbol (will strip .NS/.BO for yfinance)
         period: History period (e.g., "3mo", "6mo", "1y")
         sma_windows: List of SMA periods
         ema_windows: List of EMA periods
         rsi_window: RSI lookback window
         
     Returns:
-        Dict with technical indicators
+        Dict with technical indicators: {rsi, sma: {20, 50, 200}, ema: {12, 26}}
     """
-    # This will be called via MCP function: mcp_financial-mcp_technical_indicators
-    # TODO: Integrate actual MCP call
-    return {}
+    try:
+        import yfinance as yf
+        import pandas as pd
+        
+        # Clean ticker for yfinance (remove .NS/.BO suffix)
+        clean_ticker = ticker.replace(".NS", "").replace(".BO", "")
+        
+        # Fetch historical data
+        stock = yf.Ticker(clean_ticker)
+        hist = stock.history(period=period)
+        
+        if hist.empty:
+            return {}
+        
+        close_prices = hist["Close"]
+        
+        # Calculate RSI
+        def calculate_rsi(prices: pd.Series, window: int = 14) -> float:
+            delta = prices.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+            return float(rsi.iloc[-1]) if not rsi.empty else 50.0
+        
+        rsi_value = calculate_rsi(close_prices, rsi_window)
+        
+        # Calculate SMAs
+        sma_dict = {}
+        for window in sma_windows:
+            sma = close_prices.rolling(window=window).mean()
+            sma_dict[str(window)] = float(sma.iloc[-1]) if not sma.empty else None
+        
+        # Calculate EMAs
+        ema_dict = {}
+        for window in ema_windows:
+            ema = close_prices.ewm(span=window, adjust=False).mean()
+            ema_dict[str(window)] = float(ema.iloc[-1]) if not ema.empty else None
+        
+        return {
+            "rsi": rsi_value,
+            "sma": sma_dict,
+            "ema": ema_dict,
+            "current_price": float(close_prices.iloc[-1]) if not close_prices.empty else None
+        }
+    except Exception as e:
+        # Return empty dict on error (fallback to sentiment-only)
+        return {}
 
 
 def get_fundamental_snapshot(ticker: str) -> Dict:

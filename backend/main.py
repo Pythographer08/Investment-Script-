@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
+import time
 
 import datetime as dt
 
@@ -13,6 +14,26 @@ from backend.indian_tickers import INDIAN_TICKERS
 
 # Ticker universe: Combine US and Indian stocks
 TICKERS: List[str] = US_TICKERS + INDIAN_TICKERS
+
+# Simple in-memory cache with TTL (Time-To-Live)
+_cache: Dict[str, tuple] = {}  # key -> (data, timestamp)
+CACHE_TTL = 300  # 5 minutes in seconds
+
+
+def _get_cache(key: str) -> Optional[any]:
+    """Get cached data if still valid."""
+    if key not in _cache:
+        return None
+    data, timestamp = _cache[key]
+    if time.time() - timestamp > CACHE_TTL:
+        del _cache[key]
+        return None
+    return data
+
+
+def _set_cache(key: str, data: any) -> None:
+    """Store data in cache with current timestamp."""
+    _cache[key] = (data, time.time())
 
 
 app = FastAPI(title="US & Indian Market Investment Recommendation API (Yahoo Finance)")
@@ -106,7 +127,13 @@ def price_chart(ticker: str):
 def news():
     """
     Raw news feed for all tickers.
+    Cached for 5 minutes to reduce API calls.
     """
+    cache_key = "news_all"
+    cached = _get_cache(cache_key)
+    if cached is not None:
+        return cached
+    
     all_news: List[Dict] = []
     for ticker in TICKERS:
         try:
@@ -114,6 +141,8 @@ def news():
         except Exception:
             # If one ticker fails, continue with others
             continue
+    
+    _set_cache(cache_key, all_news)
     return all_news
 
 
@@ -122,7 +151,13 @@ def sentiment():
     """
     Per‑article sentiment for all news.
     Analyzes both title and summary together for better sentiment detection.
+    Cached for 5 minutes to reduce computation.
     """
+    cache_key = "sentiment_all"
+    cached = _get_cache(cache_key)
+    if cached is not None:
+        return cached
+    
     items = news()
     results: List[Dict] = []
     for n in items:
@@ -140,6 +175,8 @@ def sentiment():
                 "subjectivity": scores["subjectivity"],
             }
         )
+    
+    _set_cache(cache_key, results)
     return results
 
 
@@ -148,7 +185,7 @@ def recommendations():
     """
     Aggregate sentiment into per‑ticker recommendations.
     Enhanced with MCP technical indicators and fundamentals when available.
-    Returns: ticker, avg_polarity, recommendation, confidence, factors.
+    Returns: ticker, avg_polarity, recommendation, confidence, factors, news_count.
     """
     sentiments = sentiment()
     if not sentiments:
@@ -164,10 +201,13 @@ def recommendations():
         if not scores:
             continue
         avg_sentiment = sum(scores) / len(scores)
+        news_count = len(scores)  # Count of news articles analyzed
         base_rec = _recommendation_from_score(avg_sentiment)
         
         # Try to enhance with MCP data (may not work for all Indian stocks)
         enhanced = _enhance_recommendation_with_mcp(ticker, avg_sentiment, base_rec)
+        # Add news_count to the enhanced recommendation
+        enhanced["news_count"] = news_count
         
         output.append(enhanced)
 
