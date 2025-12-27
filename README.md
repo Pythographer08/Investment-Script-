@@ -6,9 +6,12 @@ An intelligent investment recommendation system that analyzes news sentiment and
 
 - **Real-time News Analysis**: Fetches latest news from Yahoo Finance for 109 stocks (50 US + 59 Indian)
 - **Sentiment Analysis**: Analyzes news headlines and summaries using TextBlob
-- **Investment Recommendations**: Provides Buy/Hold/Sell recommendations based on sentiment
-- **Interactive Dashboard**: Streamlit web interface for real-time data visualization
-- **Price Charts**: Interactive charts showing 30-day price history
+- **Investment Recommendations**: Provides Buy/Hold/Sell recommendations based on sentiment with news_count
+- **Technical Analysis**: On-demand RSI, SMA, and EMA indicators for individual stocks
+- **Fundamental Analysis**: On-demand P/E ratios, market cap, growth metrics, and dividend yield
+- **Interactive Dashboard**: Streamlit web interface with tabbed navigation for easy data exploration
+- **Price Charts**: Interactive charts showing 30-day price history with optional technical/fundamental analysis
+- **Smart Caching**: 5-minute cache for news and sentiment to reduce API calls and improve performance
 - **Daily Email Reports**: Automated daily email reports with CSV attachments
 - **Cloud Deployment**: Ready for deployment on Render/Streamlit Cloud
 
@@ -18,8 +21,10 @@ An intelligent investment recommendation system that analyzes news sentiment and
 - **Frontend**: Streamlit, Altair
 - **Data**: Yahoo Finance API (yfinance)
 - **Sentiment Analysis**: TextBlob
+- **Technical Analysis**: RSI, SMA, EMA calculations
+- **Caching**: In-memory cache with 5-minute TTL
 - **Email**: SMTP with Gmail
-- **Deployment**: Railway/Heroku ready
+- **Deployment**: Render (Backend), Streamlit Cloud (Frontend)
 
 ## Installation
 
@@ -75,10 +80,50 @@ An intelligent investment recommendation system that analyzes news sentiment and
 **Important:** Keep both terminals open while using the app. The Streamlit dashboard requires the backend API to be running.
 
 ### API Endpoints
-- `GET /news` - Latest news for all tickers
-- `GET /sentiment` - Sentiment analysis results
-- `GET /recommendations` - Investment recommendations
+
+**Core Endpoints:**
+- `GET /news` - Latest news for all tickers (cached 5 minutes)
+- `GET /sentiment` - Sentiment analysis results (cached 5 minutes)
+- `GET /recommendations` - Investment recommendations with news_count
 - `GET /price_chart?ticker=AAPL` - Price chart for specific ticker
+
+**Analysis Endpoints (On-Demand):**
+- `GET /technical/{ticker}` - Technical indicators (RSI, SMA, EMA) for a specific ticker
+- `GET /fundamental/{ticker}` - Fundamental data (P/E, market cap, growth) for a specific ticker
+- `GET /analysis/{ticker}` - Combined technical and fundamental analysis for a specific ticker
+
+**Utility Endpoints:**
+- `GET /health` - Health check endpoint for deployment monitoring
+- `GET /run-daily-report` - Trigger daily email report generation
+
+### Using Analysis Endpoints
+
+The analysis endpoints allow you to fetch technical and fundamental data for specific stocks on-demand:
+
+```bash
+# Get technical indicators for Apple
+curl https://your-api.onrender.com/technical/AAPL
+
+# Get fundamentals for TCS
+curl https://your-api.onrender.com/technical/TCS.NS
+
+# Get combined analysis for Microsoft
+curl https://your-api.onrender.com/analysis/MSFT
+```
+
+**Technical Indicators Include:**
+- RSI (Relative Strength Index) - Identifies overbought/oversold conditions
+- SMA (Simple Moving Averages) - 20, 50, and 200-day averages
+- EMA (Exponential Moving Averages) - 12 and 26-day averages
+- Current price
+
+**Fundamental Metrics Include:**
+- P/E Ratios (Trailing and Forward)
+- Market Capitalization
+- Revenue and Earnings Growth
+- Profit Margins
+- Dividend Yield
+- Analyst Target Price
 
 ### Daily Reports
 Run manually:
