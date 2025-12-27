@@ -260,6 +260,15 @@ def root():
     }
 
 
+@app.get("/health")
+def health():
+    """
+    Health check endpoint for Render deployment.
+    Returns immediately without any data fetching.
+    """
+    return {"status": "healthy", "service": "investment-recommendation-api"}
+
+
 @app.get("/run-daily-report")
 def run_daily_report():
     """
