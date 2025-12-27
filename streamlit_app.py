@@ -102,13 +102,21 @@ with tab1:
             # Display recommendations with color coding
             st.subheader(f"📋 Recommendations ({len(filtered_df)} stocks)")
             
-            # Format dataframe with colors
-            display_df = filtered_df[["ticker", "market", "avg_polarity", "recommendation", "news_count"]].copy()
+            # Format dataframe with colors (handle missing news_count column)
+            display_cols = ["ticker", "market", "avg_polarity", "recommendation"]
+            if "news_count" in filtered_df.columns:
+                display_cols.append("news_count")
+            
+            display_df = filtered_df[display_cols].copy()
             display_df["recommendation"] = display_df["recommendation"].apply(
                 lambda x: f"{get_recommendation_color(x)} {x}"
             )
             display_df["avg_polarity"] = display_df["avg_polarity"].apply(lambda x: f"{x:.3f}")
-            display_df.columns = ["Ticker", "Market", "Sentiment", "Recommendation", "News Count"]
+            
+            column_names = ["Ticker", "Market", "Sentiment", "Recommendation"]
+            if "news_count" in display_df.columns:
+                column_names.append("News Count")
+            display_df.columns = column_names
             
             st.dataframe(display_df, use_container_width=True, hide_index=True)
             
@@ -129,7 +137,10 @@ with tab1:
             # Export and email buttons
             col1, col2 = st.columns(2)
             with col1:
-                csv = filtered_df[["ticker", "market", "avg_polarity", "recommendation", "news_count"]].to_csv(index=False)
+                export_cols = ["ticker", "market", "avg_polarity", "recommendation"]
+                if "news_count" in filtered_df.columns:
+                    export_cols.append("news_count")
+                csv = filtered_df[export_cols].to_csv(index=False)
                 st.download_button(
                     "📥 Export to CSV",
                     csv,
