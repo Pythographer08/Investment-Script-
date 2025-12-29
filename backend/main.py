@@ -12,6 +12,7 @@ import yfinance as yf
 # Import US and Indian tickers
 from backend.us_tickers import US_TICKERS
 from backend.indian_tickers import INDIAN_TICKERS
+from backend.sector_mapping import get_sector, get_all_sectors
 
 # Ticker universe: Combine US and Indian stocks
 TICKERS: List[str] = US_TICKERS + INDIAN_TICKERS
@@ -524,6 +525,73 @@ def compare_stocks(tickers: str):
     return {
         "tickers": ticker_list,
         "comparison": comparison_data,
+        "timestamp": dt.datetime.now().isoformat()
+    }
+
+
+@app.get("/sector-analysis")
+def sector_analysis():
+    """
+    Analyze stocks grouped by sector.
+    Returns sector-level sentiment aggregation and recommendations.
+    """
+    # Get all recommendations
+    recs = recommendations()
+    if not recs:
+        return []
+    
+    # Group by sector
+    sector_data: Dict[str, List[Dict]] = {}
+    for rec in recs:
+        ticker = rec.get("ticker")
+        sector = get_sector(ticker)
+        if sector not in sector_data:
+            sector_data[sector] = []
+        sector_data[sector].append(rec)
+    
+    # Aggregate by sector
+    sector_summary = []
+    for sector, stocks in sector_data.items():
+        if not stocks:
+            continue
+        
+        # Calculate sector metrics
+        total_stocks = len(stocks)
+        avg_sentiment = sum(s.get("avg_polarity", 0) for s in stocks) / total_stocks if stocks else 0
+        total_news = sum(s.get("news_count", 0) for s in stocks)
+        
+        # Count recommendations
+        buy_count = sum(1 for s in stocks if s.get("recommendation") == "Buy")
+        hold_count = sum(1 for s in stocks if s.get("recommendation") == "Hold")
+        sell_count = sum(1 for s in stocks if s.get("recommendation") == "Sell")
+        
+        # Determine sector recommendation
+        if buy_count > sell_count and buy_count > hold_count:
+            sector_rec = "Buy"
+        elif sell_count > buy_count and sell_count > hold_count:
+            sector_rec = "Sell"
+        else:
+            sector_rec = "Hold"
+        
+        sector_summary.append({
+            "sector": sector,
+            "total_stocks": total_stocks,
+            "avg_sentiment": avg_sentiment,
+            "total_news": total_news,
+            "buy_count": buy_count,
+            "hold_count": hold_count,
+            "sell_count": sell_count,
+            "recommendation": sector_rec,
+            "buy_percentage": (buy_count / total_stocks * 100) if total_stocks > 0 else 0,
+            "stocks": [s.get("ticker") for s in stocks]
+        })
+    
+    # Sort by average sentiment (highest first)
+    sector_summary.sort(key=lambda x: x["avg_sentiment"], reverse=True)
+    
+    return {
+        "sectors": sector_summary,
+        "total_sectors": len(sector_summary),
         "timestamp": dt.datetime.now().isoformat()
     }
 

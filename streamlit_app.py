@@ -143,6 +143,101 @@ with tab1:
             
             st.divider()
             
+            # ========== SECTOR ANALYSIS ==========
+            st.subheader("🏭 Sector Analysis")
+            st.write("Analyze market sentiment and recommendations grouped by sector.")
+            
+            try:
+                with st.spinner("Loading sector analysis..."):
+                    sector_data = requests.get(f"{API_URL}/sector-analysis", timeout=30).json()
+                
+                if sector_data and "sectors" in sector_data:
+                    sectors_list = sector_data["sectors"]
+                    
+                    # Sector summary table
+                    sector_rows = []
+                    for sector_info in sectors_list:
+                        sector_rows.append({
+                            "Sector": sector_info["sector"],
+                            "Stocks": sector_info["total_stocks"],
+                            "Avg Sentiment": f"{sector_info['avg_sentiment']:.3f}",
+                            "Recommendation": f"{get_recommendation_color(sector_info['recommendation'])} {sector_info['recommendation']}",
+                            "Buy %": f"{sector_info['buy_percentage']:.1f}%",
+                            "Buy": sector_info["buy_count"],
+                            "Hold": sector_info["hold_count"],
+                            "Sell": sector_info["sell_count"],
+                            "News": sector_info["total_news"]
+                        })
+                    
+                    sector_df = pd.DataFrame(sector_rows)
+                    st.dataframe(sector_df, use_container_width=True, hide_index=True)
+                    
+                    # Sector sentiment chart
+                    st.write("### 📊 Sector Sentiment Comparison")
+                    sector_chart_data = pd.DataFrame({
+                        "Sector": [s["sector"] for s in sectors_list],
+                        "Sentiment": [s["avg_sentiment"] for s in sectors_list],
+                        "Recommendation": [s["recommendation"] for s in sectors_list]
+                    })
+                    
+                    sector_chart = alt.Chart(sector_chart_data).mark_bar().encode(
+                        x=alt.X("Sector:N", title="Sector", sort="-y"),
+                        y=alt.Y("Sentiment:Q", title="Average Sentiment"),
+                        color=alt.Color(
+                            "Recommendation:N",
+                            scale=alt.Scale(
+                                domain=["Buy", "Hold", "Sell"],
+                                range=["#00ff00", "#ffff00", "#ff0000"]
+                            )
+                        )
+                    ).properties(
+                        title="Sector Sentiment Scores",
+                        width=700,
+                        height=400
+                    )
+                    st.altair_chart(sector_chart, use_container_width=True)
+                    
+                    # Sector recommendation distribution
+                    st.write("### 📈 Sector Recommendation Distribution")
+                    sector_rec_data = []
+                    for sector_info in sectors_list:
+                        sector_rec_data.append({
+                            "Sector": sector_info["sector"],
+                            "Buy": sector_info["buy_count"],
+                            "Hold": sector_info["hold_count"],
+                            "Sell": sector_info["sell_count"]
+                        })
+                    
+                    sector_rec_df = pd.DataFrame(sector_rec_data)
+                    sector_rec_melted = sector_rec_df.melt(
+                        id_vars="Sector",
+                        var_name="Recommendation",
+                        value_name="Count"
+                    )
+                    
+                    rec_chart = alt.Chart(sector_rec_melted).mark_bar().encode(
+                        x=alt.X("Sector:N", title="Sector"),
+                        y=alt.Y("Count:Q", title="Number of Stocks"),
+                        color=alt.Color(
+                            "Recommendation:N",
+                            scale=alt.Scale(
+                                domain=["Buy", "Hold", "Sell"],
+                                range=["#00ff00", "#ffff00", "#ff0000"]
+                            )
+                        ),
+                        column=alt.Column("Recommendation:N", header=alt.Header(title=""))
+                    ).properties(width=200, height=300)
+                    st.altair_chart(rec_chart)
+                    
+            except requests.exceptions.Timeout:
+                st.error("⏱️ Sector analysis request timed out. Please try again.")
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Error loading sector analysis: {e}")
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+            
+            st.divider()
+            
             # ========== STOCK COMPARISON TOOL ==========
             st.subheader("🔍 Stock Comparison Tool")
             st.write("Compare up to 5 stocks side-by-side to analyze sentiment, price, and fundamentals.")
