@@ -56,7 +56,23 @@ An intelligent investment recommendation system that analyzes news sentiment and
 
 ## Usage
 
-### Local Development
+### Quick Start (Recommended - No Timeouts!)
+
+**For the fastest, timeout-free experience, see [START_APP.md](START_APP.md) for detailed instructions.**
+
+**Or use the automated script:**
+```powershell
+# Windows PowerShell
+.\start_app.ps1
+```
+
+This script will:
+1. ✅ Start the backend automatically
+2. ✅ Pre-warm the cache (prevents timeouts)
+3. ✅ Launch Streamlit dashboard
+4. ✅ Give you instant dashboard loading!
+
+### Manual Start (Alternative)
 
 **Note:** The links below only work when the services are running. Follow the steps below to start them.
 
@@ -69,7 +85,14 @@ An intelligent investment recommendation system that analyzes news sentiment and
    - **Backend API**: http://127.0.0.1:8000
    - **API Documentation**: http://127.0.0.1:8000/docs
 
-2. **Start the Streamlit Dashboard** (Terminal 2):
+2. **Pre-warm Cache (Recommended - Prevents Timeouts)**:
+   ```bash
+   # In Terminal 2, while backend is running:
+   curl http://127.0.0.1:8000/recommendations
+   # Wait 30-60 seconds for first load
+   ```
+
+3. **Start the Streamlit Dashboard** (Terminal 3):
    ```bash
    cd C:\Users\niki3\.streamlit
    streamlit run streamlit_app.py
@@ -77,7 +100,11 @@ An intelligent investment recommendation system that analyzes news sentiment and
    Once running, access:
    - **Streamlit Dashboard**: http://localhost:8501
 
-**Important:** Keep both terminals open while using the app. The Streamlit dashboard requires the backend API to be running.
+**Important:** 
+- Keep Terminal 1 (backend) running while using the app
+- First load takes 30-60 seconds (normal - fetching 109 stocks)
+- Subsequent loads are instant (5-minute cache)
+- See [START_APP.md](START_APP.md) for troubleshooting
 
 ### API Endpoints
 
