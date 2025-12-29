@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import datetime as dt
 
@@ -53,8 +54,13 @@ def _fetch_news_for_ticker(ticker: str) -> List[Dict]:
     yfinance v0.2+ uses nested structure: item['content']['title'], item['content']['summary']
     """
     try:
+        # Suppress yfinance warnings and use quiet mode
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        
         t = yf.Ticker(ticker)
         # yfinance .news is a list of dicts with 'id' and 'content' keys
+        # Use quiet=True to suppress messages
         news_items = t.news or []
 
         cleaned: List[Dict] = []
@@ -128,6 +134,7 @@ def news():
     """
     Raw news feed for all tickers.
     Cached for 5 minutes to reduce API calls.
+    Uses concurrent fetching to speed up requests (20 workers).
     """
     cache_key = "news_all"
     cached = _get_cache(cache_key)
@@ -135,13 +142,29 @@ def news():
         return cached
     
     all_news: List[Dict] = []
-    for ticker in TICKERS:
-        try:
-            all_news.extend(_fetch_news_for_ticker(ticker))
-        except Exception:
-            # If one ticker fails, continue with others
-            continue
+    total_tickers = len(TICKERS)
+    completed = 0
     
+    # Use ThreadPoolExecutor for concurrent fetching (max 20 workers to avoid overwhelming yfinance)
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        # Submit all ticker fetches
+        future_to_ticker = {executor.submit(_fetch_news_for_ticker, ticker): ticker for ticker in TICKERS}
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_ticker):
+            ticker = future_to_ticker[future]
+            completed += 1
+            try:
+                news_items = future.result(timeout=5)  # 5 second timeout per ticker
+                all_news.extend(news_items)
+                if completed % 10 == 0:  # Log progress every 10 tickers
+                    print(f"News fetch progress: {completed}/{total_tickers} tickers processed")
+            except Exception as e:
+                # If one ticker fails, continue with others
+                print(f"Error fetching news for {ticker}: {e}")
+                continue
+    
+    print(f"News fetch complete: {len(all_news)} articles from {completed} tickers")
     _set_cache(cache_key, all_news)
     return all_news
 

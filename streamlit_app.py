@@ -37,7 +37,14 @@ with tab1:
     
     try:
         with st.spinner("Loading recommendations..."):
-            recs = requests.get(f"{API_URL}/recommendations", timeout=45).json()
+            try:
+                recs = requests.get(f"{API_URL}/recommendations", timeout=120).json()
+            except requests.exceptions.Timeout:
+                st.error("⏱️ Request timed out. The backend is fetching news for 109 stocks - this may take up to 2 minutes on first load. Please try again in a moment.")
+                st.stop()
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Error connecting to backend: {e}")
+                st.stop()
         
         if recs:
             recs_df = pd.DataFrame(recs)
@@ -188,7 +195,14 @@ with tab2:
     
     try:
         with st.spinner("Loading news..."):
-            news = requests.get(f"{API_URL}/news", timeout=30).json()
+            try:
+                news = requests.get(f"{API_URL}/news", timeout=120).json()
+            except requests.exceptions.Timeout:
+                st.error("⏱️ News request timed out. Please try again in a moment.")
+                st.stop()
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Error loading news: {e}")
+                st.stop()
         
         if news:
             news_df = pd.DataFrame(news)
@@ -423,7 +437,14 @@ with tab4:
     
     try:
         with st.spinner("Loading sentiment data (this may take a moment)..."):
-            sentiment = requests.get(f"{API_URL}/sentiment", timeout=45).json()
+            try:
+                sentiment = requests.get(f"{API_URL}/sentiment", timeout=120).json()
+            except requests.exceptions.Timeout:
+                st.error("⏱️ Sentiment request timed out. Please try again in a moment.")
+                st.stop()
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Error loading sentiment: {e}")
+                st.stop()
         
         if sentiment:
             sentiment_df = pd.DataFrame(sentiment)
