@@ -462,20 +462,31 @@ with tab2:
 with tab3:
     st.subheader("💹 Stock Price Charts & Analysis")
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         chart_ticker = st.selectbox("Select a ticker to view its price chart:", TICKERS, key="chart_ticker")
     with col2:
+        chart_type = st.selectbox("Chart Type:", ["Line", "Candlestick"], key="chart_type")
+    with col3:
         period_options = ["1mo", "3mo", "6mo", "1y"]
         # Note: Backend currently only supports 1mo, but UI is ready for expansion
         st.write("**Period:** 1 month (30 days)")
     
-    # Toggle for technical/fundamental analysis
-    show_analysis = st.checkbox("📊 Show Technical & Fundamental Analysis", value=False, key="show_analysis")
+    # Toggle for technical/fundamental analysis and volume
+    col1, col2 = st.columns(2)
+    with col1:
+        show_analysis = st.checkbox("📊 Show Technical & Fundamental Analysis", value=False, key="show_analysis")
+    with col2:
+        show_volume = st.checkbox("📊 Show Volume Chart", value=False, key="show_volume")
     
     try:
         with st.spinner("Loading price data..."):
-            chart_data = requests.get(f"{API_URL}/price_chart?ticker={chart_ticker}", timeout=10).json()
+            # Request OHLC data if candlestick or volume is selected
+            include_ohlc = chart_type == "Candlestick" or show_volume
+            chart_data = requests.get(
+                f"{API_URL}/price_chart?ticker={chart_ticker}&include_ohlc={str(include_ohlc).lower()}",
+                timeout=10
+            ).json()
         
         if "error" not in chart_data and chart_data.get("dates"):
             df = pd.DataFrame({"Date": chart_data["dates"], "Close": chart_data["closes"]})
@@ -494,24 +505,84 @@ with tab3:
             with col3:
                 st.metric("Market", get_market(chart_ticker))
             
-            # Enhanced chart with area
-            chart = alt.Chart(df).mark_area(
-                line={'color': '#1f77b4'},
-                color=alt.Gradient(
-                    gradient='linear',
-                    stops=[alt.GradientStop(color='white', offset=0),
-                           alt.GradientStop(color='#1f77b4', offset=1)],
-                    x1=1, x2=1, y1=1, y2=0
+            # Chart based on selected type
+            if chart_type == "Candlestick" and all(key in chart_data for key in ["opens", "highs", "lows", "closes"]):
+                # Candlestick chart using Plotly-like approach with Altair
+                # Create candlestick data
+                candlestick_data = []
+                for i, date in enumerate(df["Date"]):
+                    candlestick_data.append({
+                        "Date": date,
+                        "Open": chart_data["opens"][i],
+                        "High": chart_data["highs"][i],
+                        "Low": chart_data["lows"][i],
+                        "Close": chart_data["closes"][i],
+                        "Color": "green" if chart_data["closes"][i] >= chart_data["opens"][i] else "red"
+                    })
+                
+                candlestick_df = pd.DataFrame(candlestick_data)
+                
+                # Create candlestick visualization
+                # High-Low lines
+                hl_chart = alt.Chart(candlestick_df).mark_rule().encode(
+                    x=alt.X("Date:T", title="Date"),
+                    y=alt.Y("Low:Q", title="Price"),
+                    y2=alt.Y2("High:Q"),
+                    color=alt.value("black")
                 )
-            ).encode(
-                x=alt.X("Date:T", title="Date"),
-                y=alt.Y("Close:Q", title="Closing Price ($)", scale=alt.Scale(zero=False))
-            ).properties(
-                title=f"{chart_ticker} - Last 30 Days Closing Prices",
-                width=700,
-                height=400
-            )
-            st.altair_chart(chart, use_container_width=True)
+                
+                # Open-Close boxes
+                oc_chart = alt.Chart(candlestick_df).mark_bar(size=8).encode(
+                    x=alt.X("Date:T", title="Date"),
+                    y=alt.Y("Open:Q", title="Price"),
+                    y2=alt.Y2("Close:Q"),
+                    color=alt.Color("Color:N", scale=alt.Scale(domain=["green", "red"], range=["#00ff00", "#ff0000"]), legend=None)
+                )
+                
+                candlestick_chart = (hl_chart + oc_chart).properties(
+                    title=f"{chart_ticker} - Candlestick Chart (Last 30 Days)",
+                    width=700,
+                    height=400
+                )
+                st.altair_chart(candlestick_chart, use_container_width=True)
+            else:
+                # Line/Area chart
+                chart = alt.Chart(df).mark_area(
+                    line={'color': '#1f77b4'},
+                    color=alt.Gradient(
+                        gradient='linear',
+                        stops=[alt.GradientStop(color='white', offset=0),
+                               alt.GradientStop(color='#1f77b4', offset=1)],
+                        x1=1, x2=1, y1=1, y2=0
+                    )
+                ).encode(
+                    x=alt.X("Date:T", title="Date"),
+                    y=alt.Y("Close:Q", title="Closing Price", scale=alt.Scale(zero=False))
+                ).properties(
+                    title=f"{chart_ticker} - Last 30 Days Closing Prices",
+                    width=700,
+                    height=400
+                )
+                st.altair_chart(chart, use_container_width=True)
+            
+            # Volume chart if requested
+            if show_volume and "volumes" in chart_data:
+                st.write("### 📊 Trading Volume")
+                volume_df = pd.DataFrame({
+                    "Date": pd.to_datetime(chart_data["dates"]),
+                    "Volume": chart_data["volumes"]
+                })
+                
+                volume_chart = alt.Chart(volume_df).mark_bar().encode(
+                    x=alt.X("Date:T", title="Date"),
+                    y=alt.Y("Volume:Q", title="Volume", axis=alt.Axis(format="~s")),
+                    color=alt.value("#888888")
+                ).properties(
+                    title=f"{chart_ticker} - Trading Volume (Last 30 Days)",
+                    width=700,
+                    height=200
+                )
+                st.altair_chart(volume_chart, use_container_width=True)
             
             # Technical & Fundamental Analysis Section
             if show_analysis:

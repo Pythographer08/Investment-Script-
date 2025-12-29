@@ -113,12 +113,24 @@ def _recommendation_from_score(score: float) -> str:
 
 
 @app.get("/price_chart")
-def price_chart(ticker: str):
+def price_chart(ticker: str, include_ohlc: bool = False):
+    """
+    Get price chart data for a ticker.
+    
+    Args:
+        ticker: Stock symbol
+        include_ohlc: If True, include Open, High, Low, Close, and Volume data
+    
+    Returns:
+        Dict with dates, closes, and optionally OHLC + volume data
+    """
     if ticker not in TICKERS:
         raise HTTPException(status_code=400, detail="Unsupported ticker")
 
     try:
-        data = yf.Ticker(ticker).history(period="1mo")
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        data = yf.Ticker(ticker).history(period="1mo", quiet=True)
     except Exception as exc:  # pragma: no cover - defensive
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -127,7 +139,17 @@ def price_chart(ticker: str):
 
     dates: List[str] = [d.strftime("%Y-%m-%d") for d in data.index.to_pydatetime()]
     closes: List[float] = [float(c) for c in data["Close"].tolist()]
-    return {"ticker": ticker, "dates": dates, "closes": closes}
+    
+    result = {"ticker": ticker, "dates": dates, "closes": closes}
+    
+    # Include OHLC and volume if requested
+    if include_ohlc:
+        result["opens"] = [float(o) for o in data["Open"].tolist()]
+        result["highs"] = [float(h) for h in data["High"].tolist()]
+        result["lows"] = [float(l) for l in data["Low"].tolist()]
+        result["volumes"] = [int(v) for v in data["Volume"].tolist()]
+    
+    return result
 
 
 @app.get("/news")
