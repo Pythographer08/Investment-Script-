@@ -401,7 +401,7 @@ with tab1:
             - **🟡 Hold**: News is mixed/neutral. No strong action suggested.
             - **🔴 Sell**: News sentiment is negative. Consider reducing exposure.
             """)
-        else:
+else:
             st.warning("No recommendations available.")
     except requests.exceptions.Timeout:
         st.error("⏱️ Recommendations request timed out. The backend may still be computing; try again shortly.")
@@ -432,7 +432,7 @@ with tab2:
                 st.error(f"❌ Error loading news: {e}")
                 st.stop()
         
-        if news:
+if news:
             news_df = pd.DataFrame(news)
             news_df["market"] = news_df["ticker"].apply(get_market)
             
@@ -451,7 +451,7 @@ with tab2:
                     st.write(f"**Summary:** {row.get('summary', 'No summary available')}")
                     if row.get('link'):
                         st.markdown(f"[🔗 Read full article]({row['link']})")
-        else:
+else:
             st.info("No news available at the moment.")
     except requests.exceptions.Timeout:
         st.error("⏱️ News request timed out. The backend may be busy; please try again in a few seconds.")
@@ -483,12 +483,21 @@ with tab3:
         with st.spinner("Loading price data..."):
             # Request OHLC data if candlestick or volume is selected
             include_ohlc = chart_type == "Candlestick" or show_volume
-            chart_data = requests.get(
+            response = requests.get(
                 f"{API_URL}/price_chart?ticker={chart_ticker}&include_ohlc={str(include_ohlc).lower()}",
-                timeout=10
-            ).json()
+                timeout=15
+            )
+            
+            # Check for HTTP errors
+            if response.status_code != 200:
+                error_detail = response.json().get("detail", "Unknown error") if response.headers.get("content-type", "").startswith("application/json") else response.text
+                st.error(f"❌ Error loading price data: {error_detail}")
+                st.stop()
+            
+            chart_data = response.json()
         
-        if "error" not in chart_data and chart_data.get("dates"):
+        # Validate we have the required data
+        if chart_data.get("dates") and chart_data.get("closes") and len(chart_data.get("dates", [])) > 0:
             df = pd.DataFrame({"Date": chart_data["dates"], "Close": chart_data["closes"]})
             df["Date"] = pd.to_datetime(df["Date"])
             
@@ -717,7 +726,7 @@ with tab3:
                         st.error(f"❌ Error loading analysis: {e}")
                 except Exception as e:
                     st.warning(f"⚠️ Could not load analysis data: {str(e)}")
-        else:
+else:
             st.warning("No price data available for this ticker.")
     except requests.exceptions.ConnectionError:
         st.warning("⚠️ Backend API not running. Start it with: `uvicorn backend.main:app --reload`")
@@ -782,7 +791,7 @@ with tab4:
             display_sentiment_df.columns = ["Ticker", "Market", "Title", "Polarity", "Subjectivity"]
             
             st.dataframe(display_sentiment_df, use_container_width=True, hide_index=True)
-        else:
+else:
             st.info("No sentiment data available.")
     except requests.exceptions.Timeout:
         st.error("⏱️ Sentiment request timed out. The backend may still be computing; try again shortly.")

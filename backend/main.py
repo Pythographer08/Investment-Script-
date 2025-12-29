@@ -130,12 +130,27 @@ def price_chart(ticker: str, include_ohlc: bool = False):
     try:
         import warnings
         warnings.filterwarnings("ignore", category=FutureWarning)
-        data = yf.Ticker(ticker).history(period="1mo", quiet=True)
-    except Exception as exc:  # pragma: no cover - defensive
-        raise HTTPException(status_code=500, detail=str(exc))
+        warnings.filterwarnings("ignore", category=UserWarning)
+        
+        # Create fresh Ticker object to avoid caching issues
+        stock = yf.Ticker(ticker)
+        
+        # Fetch with timeout and error handling
+        try:
+            data = stock.history(period="1mo", interval="1d", timeout=10, quiet=True)
+        except Exception as e:
+            print(f"Error fetching history for {ticker}: {e}")
+            raise HTTPException(status_code=500, detail=f"Error fetching price data: {str(e)}")
 
-    if data.empty:
-        raise HTTPException(status_code=404, detail="No price data found")
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"Exception in price_chart for {ticker}: {exc}")
+        raise HTTPException(status_code=500, detail=f"Error fetching price data: {str(exc)}")
+
+    if data.empty or len(data) == 0:
+        print(f"Warning: Empty data returned for {ticker}")
+        raise HTTPException(status_code=404, detail=f"No price data found for {ticker}. The stock may be delisted or data unavailable.")
 
     dates: List[str] = [d.strftime("%Y-%m-%d") for d in data.index.to_pydatetime()]
     closes: List[float] = [float(c) for c in data["Close"].tolist()]
