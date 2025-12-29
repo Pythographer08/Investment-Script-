@@ -432,7 +432,7 @@ with tab2:
                 st.error(f"❌ Error loading news: {e}")
                 st.stop()
         
-if news:
+        if news and len(news) > 0:
             news_df = pd.DataFrame(news)
             news_df["market"] = news_df["ticker"].apply(get_market)
             
@@ -451,7 +451,7 @@ if news:
                     st.write(f"**Summary:** {row.get('summary', 'No summary available')}")
                     if row.get('link'):
                         st.markdown(f"[🔗 Read full article]({row['link']})")
-else:
+        else:
             st.info("No news available at the moment.")
     except requests.exceptions.Timeout:
         st.error("⏱️ News request timed out. The backend may be busy; please try again in a few seconds.")
@@ -726,7 +726,7 @@ with tab3:
                         st.error(f"❌ Error loading analysis: {e}")
                 except Exception as e:
                     st.warning(f"⚠️ Could not load analysis data: {str(e)}")
-else:
+        else:
             st.warning("No price data available for this ticker.")
     except requests.exceptions.ConnectionError:
         st.warning("⚠️ Backend API not running. Start it with: `uvicorn backend.main:app --reload`")
@@ -791,7 +791,7 @@ with tab4:
             display_sentiment_df.columns = ["Ticker", "Market", "Title", "Polarity", "Subjectivity"]
             
             st.dataframe(display_sentiment_df, use_container_width=True, hide_index=True)
-else:
+        else:
             st.info("No sentiment data available.")
     except requests.exceptions.Timeout:
         st.error("⏱️ Sentiment request timed out. The backend may still be computing; try again shortly.")
