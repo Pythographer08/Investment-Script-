@@ -420,29 +420,38 @@ def get_full_analysis(ticker: str):
     from backend.mcp_integration import get_technical_indicators, get_fundamental_snapshot
     
     result = {
-        "ticker": ticker,
+        "ticker": ticker,  # Explicitly include ticker in response for verification
         "technical": {},
         "fundamental": {}
     }
     
-    # Fetch technical indicators
+    # Fetch technical indicators with explicit ticker logging
     try:
         technicals = get_technical_indicators(ticker, period="6mo")
         if technicals:
             result["technical"] = technicals
-    except Exception:
-        pass  # Silently fail, return empty dict
+            # Add ticker to technical data for verification
+            result["technical"]["_ticker"] = ticker
+    except Exception as e:
+        print(f"Error fetching technicals for {ticker}: {e}")
+        # Don't fail silently - log the error
     
-    # Fetch fundamentals
+    # Fetch fundamentals with explicit ticker logging
     try:
         fundamentals = get_fundamental_snapshot(ticker)
         if fundamentals:
             result["fundamental"] = fundamentals
-    except Exception:
-        pass  # Silently fail, return empty dict
+            # Add ticker to fundamental data for verification
+            result["fundamental"]["_ticker"] = ticker
+    except Exception as e:
+        print(f"Error fetching fundamentals for {ticker}: {e}")
+        # Don't fail silently - log the error
     
     if not result["technical"] and not result["fundamental"]:
-        raise HTTPException(status_code=404, detail="No analysis data available for this ticker")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No analysis data available for ticker {ticker}. This may be due to data unavailability from the source."
+        )
     
     return result
 
