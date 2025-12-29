@@ -141,6 +141,139 @@ with tab1:
             ).properties(width=150, height=200)
             st.altair_chart(chart)
             
+            st.divider()
+            
+            # ========== STOCK COMPARISON TOOL ==========
+            st.subheader("🔍 Stock Comparison Tool")
+            st.write("Compare up to 5 stocks side-by-side to analyze sentiment, price, and fundamentals.")
+            
+            # Multi-select for stocks to compare
+            selected_tickers = st.multiselect(
+                "Select stocks to compare (2-5 stocks):",
+                options=TICKERS,
+                default=[],
+                max_selections=5,
+                key="compare_tickers"
+            )
+            
+            if len(selected_tickers) >= 2:
+                # Format tickers for API (comma-separated)
+                tickers_param = ",".join(selected_tickers)
+                
+                try:
+                    with st.spinner("Loading comparison data..."):
+                        compare_data = requests.get(
+                            f"{API_URL}/compare?tickers={tickers_param}",
+                            timeout=30
+                        ).json()
+                    
+                    if compare_data and "comparison" in compare_data:
+                        comparison_list = compare_data["comparison"]
+                        
+                        # Create comparison table
+                        st.write("### 📊 Side-by-Side Comparison")
+                        
+                        # Build comparison DataFrame
+                        compare_rows = []
+                        for item in comparison_list:
+                            ticker = item["ticker"]
+                            market = item["market"]
+                            sent = item.get("sentiment", {})
+                            price = item.get("price", {})
+                            tech = item.get("technical", {})
+                            fund = item.get("fundamental", {})
+                            
+                            row = {
+                                "Ticker": ticker,
+                                "Market": market,
+                                "Sentiment": f"{sent.get('avg_polarity', 0):.3f}",
+                                "Recommendation": f"{get_recommendation_color(sent.get('recommendation', 'Hold'))} {sent.get('recommendation', 'Hold')}",
+                                "News Count": sent.get("news_count", 0),
+                                "Current Price": f"${price.get('current', 'N/A'):.2f}" if price.get('current') and market == "US" else (f"₹{price.get('current', 'N/A'):.2f}" if price.get('current') and market == "Indian" else "N/A"),
+                                "RSI": f"{tech.get('rsi', 'N/A'):.2f}" if tech.get('rsi') else "N/A",
+                                "P/E Ratio": f"{fund.get('trailingPE', 'N/A'):.2f}" if fund.get('trailingPE') else "N/A",
+                                "Market Cap": f"${fund.get('marketCap', 'N/A')/1e9:.2f}B" if fund.get('marketCap') else "N/A",
+                            }
+                            compare_rows.append(row)
+                        
+                        compare_df = pd.DataFrame(compare_rows)
+                        st.dataframe(compare_df, use_container_width=True, hide_index=True)
+                        
+                        # Price comparison chart
+                        st.write("### 💹 Price Comparison (30 Days)")
+                        price_charts_data = []
+                        for ticker in selected_tickers:
+                            try:
+                                chart_data = requests.get(
+                                    f"{API_URL}/price_chart?ticker={ticker}",
+                                    timeout=10
+                                ).json()
+                                if chart_data.get("dates") and chart_data.get("closes"):
+                                    for date, close in zip(chart_data["dates"], chart_data["closes"]):
+                                        price_charts_data.append({
+                                            "Date": pd.to_datetime(date),
+                                            "Price": close,
+                                            "Ticker": ticker
+                                        })
+                            except Exception:
+                                continue
+                        
+                        if price_charts_data:
+                            price_df = pd.DataFrame(price_charts_data)
+                            price_chart = alt.Chart(price_df).mark_line().encode(
+                                x=alt.X("Date:T", title="Date"),
+                                y=alt.Y("Price:Q", title="Price", scale=alt.Scale(zero=False)),
+                                color=alt.Color("Ticker:N", title="Stock"),
+                                strokeWidth=alt.value(2)
+                            ).properties(
+                                title="Price Comparison Over Time",
+                                width=700,
+                                height=400
+                            )
+                            st.altair_chart(price_chart, use_container_width=True)
+                        
+                        # Sentiment comparison chart
+                        st.write("### 📈 Sentiment Comparison")
+                        sentiment_data = []
+                        for item in comparison_list:
+                            sentiment_data.append({
+                                "Ticker": item["ticker"],
+                                "Sentiment": item.get("sentiment", {}).get("avg_polarity", 0),
+                                "Recommendation": item.get("sentiment", {}).get("recommendation", "Hold")
+                            })
+                        
+                        if sentiment_data:
+                            sent_df = pd.DataFrame(sentiment_data)
+                            sent_chart = alt.Chart(sent_df).mark_bar().encode(
+                                x=alt.X("Ticker:N", title="Stock"),
+                                y=alt.Y("Sentiment:Q", title="Average Sentiment"),
+                                color=alt.Color(
+                                    "Recommendation:N",
+                                    scale=alt.Scale(
+                                        domain=["Buy", "Hold", "Sell"],
+                                        range=["#00ff00", "#ffff00", "#ff0000"]
+                                    )
+                                )
+                            ).properties(
+                                title="Sentiment Score Comparison",
+                                width=700,
+                                height=300
+                            )
+                            st.altair_chart(sent_chart, use_container_width=True)
+                        
+                except requests.exceptions.Timeout:
+                    st.error("⏱️ Comparison request timed out. Please try again.")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"❌ Error loading comparison: {e}")
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+            elif len(selected_tickers) == 1:
+                st.info("👆 Select at least 2 stocks to compare.")
+            else:
+                st.info("👆 Select 2-5 stocks from the dropdown above to compare them side-by-side.")
+            
+            st.divider()
+            
             # Export and email buttons
             col1, col2 = st.columns(2)
             with col1:

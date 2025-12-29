@@ -424,6 +424,110 @@ def get_full_analysis(ticker: str):
     return result
 
 
+@app.get("/compare")
+def compare_stocks(tickers: str):
+    """
+    Compare multiple stocks side-by-side.
+    
+    Args:
+        tickers: Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOGL")
+                Maximum 5 tickers for performance
+    
+    Returns:
+        Dict with comparison data: sentiment, price, technicals, fundamentals
+    """
+    # Parse tickers
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    
+    # Validate tickers
+    invalid_tickers = [t for t in ticker_list if t not in TICKERS]
+    if invalid_tickers:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Unsupported tickers: {', '.join(invalid_tickers)}"
+        )
+    
+    # Limit to 5 tickers for performance
+    if len(ticker_list) > 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum 5 tickers allowed for comparison"
+        )
+    
+    if len(ticker_list) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="At least 2 tickers required for comparison"
+        )
+    
+    from backend.mcp_integration import get_technical_indicators, get_fundamental_snapshot
+    
+    # Get recommendations data for sentiment
+    sentiments = sentiment()
+    sentiment_by_ticker = {item["ticker"]: item for item in sentiments}
+    
+    comparison_data = []
+    
+    for ticker in ticker_list:
+        # Get sentiment data
+        sentiment_data = sentiment_by_ticker.get(ticker, {})
+        avg_polarity = 0.0
+        news_count = 0
+        if sentiment_data:
+            # Calculate average polarity for this ticker
+            ticker_sentiments = [s for s in sentiments if s["ticker"] == ticker]
+            if ticker_sentiments:
+                polarities = [float(s["polarity"]) for s in ticker_sentiments]
+                avg_polarity = sum(polarities) / len(polarities) if polarities else 0.0
+                news_count = len(ticker_sentiments)
+        
+        # Get current price from price chart
+        try:
+            price_data = price_chart(ticker)
+            current_price = price_data["closes"][-1] if price_data.get("closes") else None
+        except Exception:
+            current_price = None
+        
+        # Get technical indicators
+        technicals = {}
+        try:
+            technicals = get_technical_indicators(ticker, period="6mo")
+        except Exception:
+            pass
+        
+        # Get fundamentals
+        fundamentals = {}
+        try:
+            fundamentals = get_fundamental_snapshot(ticker)
+        except Exception:
+            pass
+        
+        # Build comparison entry
+        entry = {
+            "ticker": ticker,
+            "market": "Indian" if ticker.endswith((".NS", ".BO")) else "US",
+            "sentiment": {
+                "avg_polarity": avg_polarity,
+                "news_count": news_count,
+                "recommendation": _recommendation_from_score(avg_polarity)
+            },
+            "price": {
+                "current": current_price,
+                "change_30d": None  # Could calculate from price_data
+            },
+            "technical": technicals,
+            "fundamental": fundamentals
+        }
+        
+        comparison_data.append(entry)
+    
+    return {
+        "tickers": ticker_list,
+        "comparison": comparison_data,
+        "timestamp": dt.datetime.now().isoformat()
+    }
+
+
 @app.get("/run-daily-report")
 def run_daily_report():
     """
