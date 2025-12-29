@@ -46,7 +46,7 @@ with tab1:
                 st.error(f"❌ Error connecting to backend: {e}")
                 st.stop()
         
-        if recs:
+        if recs and len(recs) > 0:
             recs_df = pd.DataFrame(recs)
             
             # Add market column
@@ -401,7 +401,7 @@ with tab1:
             - **🟡 Hold**: News is mixed/neutral. No strong action suggested.
             - **🔴 Sell**: News sentiment is negative. Consider reducing exposure.
             """)
-else:
+        else:
             st.warning("No recommendations available.")
     except requests.exceptions.Timeout:
         st.error("⏱️ Recommendations request timed out. The backend may still be computing; try again shortly.")
